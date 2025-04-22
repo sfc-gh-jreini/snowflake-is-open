@@ -9,7 +9,7 @@ st.markdown("Think you know your open source Snowflake stack? Match each project
 # Add the reset quiz button
 if st.button("🔄 Reset Quiz"):
     st.session_state.clear()
-    st.experimental_rerun()
+    st.rerun()
 
 # Define correct matches
 projects = {
