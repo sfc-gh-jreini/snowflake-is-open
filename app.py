@@ -108,19 +108,32 @@ if st.button("✅ Check My Matches"):
 # --- Leaderboard Display in Sidebar ---
 with st.sidebar:
     st.markdown("## Leaderboard")
-    # Read leaderboard from Snowflake, ordered by score descending, then duration ascending
-    select_query = """
-        SELECT user_name, correct, duration 
-        FROM leaderboard_table 
-        ORDER BY correct DESC, duration ASC
-    """
-    cursor.execute(select_query)
-    leaderboard = cursor.fetchall()
-    if leaderboard:
-        for row in leaderboard:
-            st.write(f"Name: **{row[0]}**, Score: **{row[1]}/{len(projects)}**, Time: **{row[2]} seconds**")
-    else:
-        st.info("No leaderboard data yet.")
+    try:
+        # Establish a separate Snowflake connection for the leaderboard
+        conn_ls = snowflake.connector.connect(
+            user=os.getenv("SNOWFLAKE_USER"), 
+            password=os.getenv("SNOWFLAKE_PASSWORD"), 
+            account=os.getenv("SNOWFLAKE_ACCOUNT"), 
+            warehouse="COMPUTE_WH", 
+            database="OPEN_SNOW", 
+            schema="PUBLIC"
+        )
+        cursor_ls = conn_ls.cursor()
+        
+        select_query = """
+            SELECT user_name, correct, duration 
+            FROM leaderboard_table 
+            ORDER BY correct DESC, duration ASC
+        """
+        cursor_ls.execute(select_query)
+        leaderboard = cursor_ls.fetchall()
+        if leaderboard:
+            for row in leaderboard:
+                st.write(f"Name: **{row[0]}**, Score: **{row[1]}/{len(projects)}**, Time: **{row[2]} seconds**")
+        else:
+            st.info("No leaderboard data yet.")
+    except Exception as e:
+        st.error(e)
 
 st.markdown("---")
 st.caption("Made with ❤️ + Streamlit. Powered by Snowflake OSS 🔷")
