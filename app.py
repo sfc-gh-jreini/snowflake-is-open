@@ -1,11 +1,26 @@
 import streamlit as st
 import random
+import time
+import csv
 
 st.set_page_config(page_title="🧩 Match the Snowflake OSS Tool", layout="centered")
 
 st.title("🔷 Match the Snowflake OSS Tool to What It Does")
 st.markdown("Think you know your open source Snowflake stack? Match each project to its purpose!")
 
+# --- Start Screen: Enter Name and Start Quiz ---
+if not st.session_state.get("quiz_started", False):
+    user_name = st.text_input("Enter your name:")
+    if st.button("Start Quiz") and user_name:
+        st.session_state['quiz_started'] = True
+        st.session_state['user_name'] = user_name
+        st.session_state['start_time'] = time.time()
+        # Ensure that the score is recorded only once per quiz
+        st.session_state.pop("score_submitted", None)
+        st.rerun()
+    st.stop()
+
+# --- Quiz Code ---
 # Add the reset quiz button
 if st.button("🔄 Reset Quiz"):
     st.session_state.clear()
@@ -64,6 +79,32 @@ if st.button("✅ Check My Matches"):
         st.success(f"👏 Not bad! You got {correct} out of {len(projects)} right.")
     else:
         st.warning(f"😅 Only {correct} correct. Want to try again?")
+
+    # Record the quiz end time and calculate duration
+    end_time = time.time()
+    duration = end_time - st.session_state.start_time
+
+    # Append quiz result to leaderboard if not already recorded
+    if "score_submitted" not in st.session_state:
+        with open("leaderboard.csv", "a", newline="") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([st.session_state.user_name, correct, f"{duration:.2f} seconds"])
+        st.session_state["score_submitted"] = True
+
+# --- Leaderboard Display ---
+st.markdown("---")
+st.markdown("## Leaderboard")
+try:
+    with open("leaderboard.csv", "r", newline="") as csvfile:
+        reader = csv.reader(csvfile)
+        leaderboard = list(reader)
+    if leaderboard:
+        for row in leaderboard:
+            st.write(f"Name: **{row[0]}**, Score: **{row[1]}/{len(projects)}**, Time: **{row[2]}**")
+    else:
+        st.info("No leaderboard data yet.")
+except Exception as e:
+    st.info("No leaderboard data yet.")
 
 st.markdown("---")
 st.caption("Made with ❤️ + Streamlit. Powered by Snowflake OSS 🔷")
