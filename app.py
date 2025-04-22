@@ -18,14 +18,19 @@ projects = {
 project_names = list(projects.keys())
 project_descriptions = list(projects.values())
 
-# Shuffle only once per session
+# Shuffle project descriptions only once per session
 if "shuffled_descriptions" not in st.session_state:
     st.session_state.shuffled_descriptions = random.sample(project_descriptions, len(project_descriptions))
+
+# Shuffle project order only once per session
+if "shuffled_names" not in st.session_state:
+    st.session_state.shuffled_names = random.sample(project_names, len(project_names))
 
 st.markdown("### 🔁 Your Matches")
 user_answers = {}
 
-for name in project_names:
+# Use the shuffled order for projects
+for name in st.session_state.shuffled_names:
     user_answers[name] = st.selectbox(
         f"What does **{name}** do?",
         [""] + st.session_state.shuffled_descriptions,
