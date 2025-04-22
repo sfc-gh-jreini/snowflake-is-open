@@ -91,22 +91,22 @@ if st.button("✅ Check My Matches"):
             writer.writerow([st.session_state.user_name, correct, f"{duration:.2f}"])
         st.session_state["score_submitted"] = True
 
-# --- Leaderboard Display ---
-st.markdown("---")
-st.markdown("## Leaderboard")
-try:
-    with open("leaderboard.csv", "r", newline="") as csvfile:
-        reader = csv.reader(csvfile)
-        leaderboard = list(reader)
-    if leaderboard:
-        # Sort leaderboard: high score first, then lower time (as float)
-        leaderboard = sorted(leaderboard, key=lambda row: (-int(row[1]), float(row[2])))
-        for row in leaderboard:
-            st.write(f"Name: **{row[0]}**, Score: **{row[1]}/{len(projects)}**, Time: **{row[2]} seconds**")
-    else:
+# --- Leaderboard Display in Sidebar ---
+with st.sidebar:
+    st.markdown("## Leaderboard")
+    try:
+        with open("leaderboard.csv", "r", newline="") as csvfile:
+            reader = csv.reader(csvfile)
+            leaderboard = list(reader)
+        if leaderboard:
+            # Sort leaderboard: high score first, then lower time (as float)
+            leaderboard = sorted(leaderboard, key=lambda row: (-int(row[1]), float(row[2])))
+            for row in leaderboard:
+                st.write(f"Name: **{row[0]}**, Score: **{row[1]}/{len(projects)}**, Time: **{row[2]} seconds**")
+        else:
+            st.info("No leaderboard data yet.")
+    except Exception as e:
         st.info("No leaderboard data yet.")
-except Exception as e:
-    st.info("No leaderboard data yet.")
 
 st.markdown("---")
 st.caption("Made with ❤️ + Streamlit. Powered by Snowflake OSS 🔷")
