@@ -3,8 +3,19 @@ import random
 import time
 import snowflake.connector
 import os
+from snowflake.snowpark.context import get_active_session
 
 st.set_page_config(page_title="🧩 Match the Snowflake OSS Tool", layout="centered")
+
+# Create a cached Snowflake connection (only once per session)
+@st.cache_resource
+def get_snowflake_connection():
+    session = get_active_session()
+    return session.connection
+
+# Get a global connection and cursor
+conn = get_snowflake_connection()
+cursor = conn.cursor()
 
 st.title("🔷 Match the Snowflake OSS Tool to What It Does")
 st.markdown("Think you know your open source Snowflake stack? Match each project to its purpose!")
@@ -36,21 +47,18 @@ projects = {
     "Streamlit": "📱 Build and share beautiful data apps",
     "ArcticTraining": "🏋️ Simplify LLM training experiments"
 }
-
 project_names = list(projects.keys())
 project_descriptions = list(projects.values())
 
 # Shuffle project descriptions only once per session
 if "shuffled_descriptions" not in st.session_state:
     st.session_state.shuffled_descriptions = random.sample(project_descriptions, len(project_descriptions))
-
 # Shuffle project order only once per session
 if "shuffled_names" not in st.session_state:
     st.session_state.shuffled_names = random.sample(project_names, len(project_names))
 
 st.markdown("### 🔁 Your Matches")
 user_answers = {}
-
 # Use the shuffled order for projects
 for name in st.session_state.shuffled_names:
     user_answers[name] = st.selectbox(
@@ -85,48 +93,26 @@ if st.button("✅ Check My Matches"):
     end_time = time.time()
     duration = end_time - st.session_state.start_time
 
-    # Establish a connection to Snowflake (update details as needed)
-    conn = snowflake.connector.connect(
-        user=os.getenv("SNOWFLAKE_USER"), 
-        password=os.getenv("SNOWFLAKE_PASSWORD"), 
-        account=os.getenv("SNOWFLAKE_ACCOUNT"), 
-        warehouse="COMPUTE_WH", 
-        database="OPEN_SNOW", 
-        schema="PUBLIC"
-    )
-    cursor = conn.cursor()
-
-    # At the end of the quiz, insert the result into the Snowflake table
+    # Insert the result into the Snowflake leaderboard table using the global cursor
     if "score_submitted" not in st.session_state:
-        insert_query = """
+        insert_query = f"""
             INSERT INTO leaderboard_table (user_name, correct, duration) 
-            VALUES (%s, %s, %s)
+            VALUES ('{st.session_state.user_name}', {correct}, '{duration:.2f}')
         """
-        cursor.execute(insert_query, (st.session_state.user_name, correct, f"{duration:.2f}"))
+        cursor.execute(insert_query)
         st.session_state["score_submitted"] = True
 
 # --- Leaderboard Display in Sidebar ---
 with st.sidebar:
     st.markdown("## Leaderboard")
     try:
-        # Establish a separate Snowflake connection for the leaderboard
-        conn_ls = snowflake.connector.connect(
-            user=os.getenv("SNOWFLAKE_USER"), 
-            password=os.getenv("SNOWFLAKE_PASSWORD"), 
-            account=os.getenv("SNOWFLAKE_ACCOUNT"), 
-            warehouse="COMPUTE_WH", 
-            database="OPEN_SNOW", 
-            schema="PUBLIC"
-        )
-        cursor_ls = conn_ls.cursor()
-        
         select_query = """
             SELECT user_name, correct, duration 
             FROM leaderboard_table 
             ORDER BY correct DESC, duration ASC
         """
-        cursor_ls.execute(select_query)
-        leaderboard = cursor_ls.fetchall()
+        cursor.execute(select_query)
+        leaderboard = cursor.fetchall()
         if leaderboard:
             for row in leaderboard:
                 st.write(f"Name: **{row[0]}**, Score: **{row[1]}/{len(projects)}**, Time: **{row[2]} seconds**")
