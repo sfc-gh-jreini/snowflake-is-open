@@ -84,11 +84,11 @@ if st.button("✅ Check My Matches"):
     end_time = time.time()
     duration = end_time - st.session_state.start_time
 
-    # Append quiz result to leaderboard if not already recorded
+    # Append quiz result to leaderboard if not already recorded (store numeric values)
     if "score_submitted" not in st.session_state:
         with open("leaderboard.csv", "a", newline="") as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow([st.session_state.user_name, correct, f"{duration:.2f} seconds"])
+            writer.writerow([st.session_state.user_name, correct, f"{duration:.2f}"])
         st.session_state["score_submitted"] = True
 
 # --- Leaderboard Display ---
@@ -99,8 +99,10 @@ try:
         reader = csv.reader(csvfile)
         leaderboard = list(reader)
     if leaderboard:
+        # Sort leaderboard: high score first, then lower time (as float)
+        leaderboard = sorted(leaderboard, key=lambda row: (-int(row[1]), float(row[2])))
         for row in leaderboard:
-            st.write(f"Name: **{row[0]}**, Score: **{row[1]}/{len(projects)}**, Time: **{row[2]}**")
+            st.write(f"Name: **{row[0]}**, Score: **{row[1]}/{len(projects)}**, Time: **{row[2]} seconds**")
     else:
         st.info("No leaderboard data yet.")
 except Exception as e:
