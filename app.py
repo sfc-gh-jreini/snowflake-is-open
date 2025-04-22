@@ -6,6 +6,11 @@ st.set_page_config(page_title="🧩 Match the Snowflake OSS Tool", layout="cente
 st.title("🔷 Match the Snowflake OSS Tool to What It Does")
 st.markdown("Think you know your open source Snowflake stack? Match each project to its purpose!")
 
+# Add the reset quiz button
+if st.button("🔄 Reset Quiz"):
+    st.session_state.clear()
+    st.experimental_rerun()
+
 # Define correct matches
 projects = {
     "TruLens": "🔍 Evaluations & tracing for LLM apps",
@@ -13,6 +18,7 @@ projects = {
     "Apache Polaris": "📚 Open metadata and data catalog system",
     "Arctic Embed": "🧠 Tiny but powerful embedding model",
     "Streamlit": "📱 Build and share beautiful data apps",
+    "ArcticTraining": "🏋️ Simplify LLM training experiments"
 }
 
 project_names = list(projects.keys())
