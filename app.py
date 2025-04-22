@@ -1,7 +1,8 @@
 import streamlit as st
 import random
 import time
-import csv
+import snowflake.connector
+import os
 
 st.set_page_config(page_title="🧩 Match the Snowflake OSS Tool", layout="centered")
 
@@ -84,28 +85,41 @@ if st.button("✅ Check My Matches"):
     end_time = time.time()
     duration = end_time - st.session_state.start_time
 
-    # Append quiz result to leaderboard if not already recorded (store numeric values)
+    # Establish a connection to Snowflake (update details as needed)
+    conn = snowflake.connector.connect(
+        user=os.getenv("SNOWFLAKE_USER"), 
+        password=os.getenv("SNOWFLAKE_PASSWORD"), 
+        account=os.getenv("SNOWFLAKE_ACCOUNT"), 
+        warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"), 
+        database=os.getenv("SNOWFLAKE_DATABASE"), 
+        schema=os.getenv("SNOWFLAKE_SCHEMA")
+    )
+    cursor = conn.cursor()
+
+    # At the end of the quiz, insert the result into the Snowflake table
     if "score_submitted" not in st.session_state:
-        with open("leaderboard.csv", "a", newline="") as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow([st.session_state.user_name, correct, f"{duration:.2f}"])
+        insert_query = """
+            INSERT INTO leaderboard_table (user_name, correct, duration) 
+            VALUES (%s, %s, %s)
+        """
+        cursor.execute(insert_query, (st.session_state.user_name, correct, f"{duration:.2f}"))
         st.session_state["score_submitted"] = True
 
 # --- Leaderboard Display in Sidebar ---
 with st.sidebar:
     st.markdown("## Leaderboard")
-    try:
-        with open("leaderboard.csv", "r", newline="") as csvfile:
-            reader = csv.reader(csvfile)
-            leaderboard = list(reader)
-        if leaderboard:
-            # Sort leaderboard: high score first, then lower time (as float)
-            leaderboard = sorted(leaderboard, key=lambda row: (-int(row[1]), float(row[2])))
-            for row in leaderboard:
-                st.write(f"Name: **{row[0]}**, Score: **{row[1]}/{len(projects)}**, Time: **{row[2]} seconds**")
-        else:
-            st.info("No leaderboard data yet.")
-    except Exception as e:
+    # Read leaderboard from Snowflake, ordered by score descending, then duration ascending
+    select_query = """
+        SELECT user_name, correct, duration 
+        FROM leaderboard_table 
+        ORDER BY correct DESC, duration ASC
+    """
+    cursor.execute(select_query)
+    leaderboard = cursor.fetchall()
+    if leaderboard:
+        for row in leaderboard:
+            st.write(f"Name: **{row[0]}**, Score: **{row[1]}/{len(projects)}**, Time: **{row[2]} seconds**")
+    else:
         st.info("No leaderboard data yet.")
 
 st.markdown("---")
